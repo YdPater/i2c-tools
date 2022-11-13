@@ -118,7 +118,6 @@ def main(chip, args):
         else:
             try:
                 ans = chip.read_from_2byte_cell_addr(addr_1, addr_2, 1)[0]
-                print(ans)
                 print(f"HEX value found at {addr} -> {hex(ans)}")
             except I2cNackError:
                 print("[!] Received NACK message from device. Write failed!")
