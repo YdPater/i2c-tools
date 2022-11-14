@@ -1,7 +1,7 @@
 from pyftdi.i2c import I2cController, I2cNackError
 from argparse import ArgumentParser
-from tqdm import tqdm
 from sys import exit
+from math import floor
 
 
 class Handler:
@@ -35,10 +35,6 @@ class Handler:
         data = self.slave.exchange([cel_addr_1, cel_addr_2], readlen)
         return data
     
-    def read_single_byte(self, readlen: int, start: bool, stop: bool) -> hex:
-        data = self.slave.read(readlen=readlen, relax=stop, start=start)
-        return data
-    
     def write_to_addr(self, addr_1: int, addr_2, value: hex) -> None:
         if not isinstance(addr_1, int) or not isinstance(addr_2, int):
             raise ValueError("Address parts must be in int format")
@@ -47,12 +43,25 @@ class Handler:
          
     
     def dump_head(self) -> None:
-        for i in range(0x1):
-            print(f"{hex(i)} - {hex(i + 0x0f)}", end=": ")
-            for j in range(0x10):
-                _data = self.read_from_2byte_cell_addr(i, j, 1)
-                print(f"{_data}", end=" ")
-            print("")
+        num_of_reads = 100
+        _data = self.read_from_2byte_cell_addr(0x00, 0x00, num_of_reads)
+        _addr = 0
+        amount_per_row = 20
+        counter = 0
+        for d in _data:
+            if counter == 0:
+                print(f"{_addr:#0{6}x}| ", end="")
+            if counter < amount_per_row -1:
+                print(f"{d:#0{4}x}", end=" ")
+                counter += 1
+                _addr += 1
+            else:
+                print(f"{d:#0{4}x}")
+                counter = 0
+                _addr += 1
+        print()
+            
+
 
 
 class Atmel_24c256(Handler):
@@ -64,14 +73,19 @@ class Atmel_24c256(Handler):
         super().__init__(eeprom_addr, i2c)
 
     def dump_full_content(self, outputfile: str):
-        sub_count = 0
+        chunk_size = 10000
+        n_times = floor(self.device_size / chunk_size)
+        rest = self.device_size % chunk_size
+        _addr = 0
         with open(outputfile, "ab") as outfile:
-            data = self.read_from_2byte_cell_addr(0x00, 0x00, 1) # first read to set the current address to the start 
-            outfile.write(data)
-            for i in tqdm(range(self.device_size)):
-                data = self.read_single_byte(1, True, True)
-                sub_count += 1
-                outfile.write(data)
+            for _ in range(n_times):
+                high, low = divmod(_addr, 0x100)
+                data = self.read_from_2byte_cell_addr(high, low, chunk_size)
+                _addr += chunk_size
+                outfile.write(bytes(data))
+            high, low = divmod(_addr, 0x100)
+            data = self.read_from_2byte_cell_addr(high, low, rest + 1)
+            outfile.write(bytes(data))
     
 
 def main(chip, args):
