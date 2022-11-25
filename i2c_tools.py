@@ -41,7 +41,6 @@ class Handler:
         self.slave.write([addr_1, addr_2, value], relax=True, start=True)
         self.slave.write([], relax=True, start=False)
          
-    
     def dump_head(self) -> None:
         num_of_reads = 100
         _data = self.read_from_2byte_cell_addr(0x00, 0x00, num_of_reads)
@@ -60,18 +59,7 @@ class Handler:
                 counter = 0
                 _addr += 1
         print()
-            
-
-
-
-class Atmel_24c256(Handler):
-    company = "Atmel"
-    device_type = "24c256"
-    device_size = 0x7fff
     
-    def __init__(self, eeprom_addr: int, i2c: I2cController) -> None:
-        super().__init__(eeprom_addr, i2c)
-
     def dump_full_content(self, outputfile: str):
         chunk_size = 10000
         n_times = floor(self.device_size / chunk_size)
@@ -86,7 +74,24 @@ class Atmel_24c256(Handler):
             high, low = divmod(_addr, 0x100)
             data = self.read_from_2byte_cell_addr(high, low, rest + 1)
             outfile.write(bytes(data))
+
+
+class Atmel_24c256(Handler):
+    company = "Atmel"
+    device_type = "24c256"
+    device_size = 0x7fff
     
+    def __init__(self, eeprom_addr: int, i2c: I2cController) -> None:
+        super().__init__(eeprom_addr, i2c, self.device_size)
+
+
+class ST_M24215_W(Handler):
+    company = "STM"
+    device_type = "m24215-w"
+    device_size = 0xfa00
+    def __init__(self, eeprom_addr: int, i2c: I2cController) -> None:
+        super().__init__(eeprom_addr, i2c)
+
 
 def main(chip, args):
     if args.mode == "dump_head":
@@ -149,7 +154,7 @@ if __name__ == "__main__":
     parser.add_argument("--ftdi_device",
                         help="Specify the FTDI device to use. Default: 'ftdi://:/1'",
                         type=str, default="ftdi://:/1")
-    parser.add_argument("--eeprom_device", choices=["atmel_24c256"], required=True)
+    parser.add_argument("--eeprom_device", choices=["atmel_24c256", "st_m24215_w"], required=True)
     parser.add_argument("-o" , "--output-file", help="Specify dump file for eeprom contents", default="mem.out")
     subparsers = parser.add_subparsers(dest="Mode command")
     subparsers.required = True
@@ -163,6 +168,11 @@ if __name__ == "__main__":
     i2c = I2cController()
     i2c.configure(args.ftdi_device)
 
-    chip = Atmel_24c256(eeprom_addr, i2c)
+    if args.eeprom_device == "atmel_24c256":
+        chip = Atmel_24c256(eeprom_addr, i2c)
+    elif args.eeprom_device == "st_m24215_w":
+        chip = ST_M24215_W(eeprom_addr, i2c)
+    else:
+        print("[!] Unsupported chip. See help for available devices.")
     main(chip, args)
     

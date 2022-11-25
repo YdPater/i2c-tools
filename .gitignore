@@ -2,4 +2,5 @@ venv/
 *.pyc
 __pycache__
 *.out
+*.bak
 i2cscan.py
