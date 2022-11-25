@@ -61,19 +61,17 @@ class Handler:
         print()
     
     def dump_full_content(self, outputfile: str):
-        chunk_size = 10000
-        n_times = floor(self.device_size / chunk_size)
-        rest = self.device_size % chunk_size
-        _addr = 0
+        chunk_size = 256
+        counter = 0
+        high, _ = divmod(self.device_size, 0x100)
         with open(outputfile, "ab") as outfile:
-            for _ in range(n_times):
-                high, low = divmod(_addr, 0x100)
-                data = self.read_from_2byte_cell_addr(high, low, chunk_size)
-                _addr += chunk_size
+            while True:
+                data = self.read_from_2byte_cell_addr(counter, 0x00, chunk_size)
+                counter += 1
                 outfile.write(bytes(data))
-            high, low = divmod(_addr, 0x100)
-            data = self.read_from_2byte_cell_addr(high, low, rest + 1)
-            outfile.write(bytes(data))
+                if counter == high + 1:
+                    return
+            
 
 
 class Atmel_24c256(Handler):
@@ -88,7 +86,7 @@ class Atmel_24c256(Handler):
 class ST_M24215_W(Handler):
     company = "STM"
     device_type = "m24215-w"
-    device_size = 0xfa00
+    device_size = 0xffff
     def __init__(self, eeprom_addr: int, i2c: I2cController) -> None:
         super().__init__(eeprom_addr, i2c)
 
