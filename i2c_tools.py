@@ -80,15 +80,39 @@ class Atmel_24c256(Handler):
     device_size = 0x7fff
     
     def __init__(self, eeprom_addr: int, i2c: I2cController) -> None:
-        super().__init__(eeprom_addr, i2c, self.device_size)
+        super().__init__(eeprom_addr, i2c)
 
 
 class ST_M24215_W(Handler):
     company = "STM"
     device_type = "m24215-w"
     device_size = 0xffff
+    
     def __init__(self, eeprom_addr: int, i2c: I2cController) -> None:
         super().__init__(eeprom_addr, i2c)
+
+
+class ST_M24128_BW(Handler):
+    company = "STM"
+    device_type = "m24128bw"
+    device_size = 0x3e80
+
+    def __init__(self, eeprom_addr: int, i2c: I2cController) -> None:
+        super().__init__(eeprom_addr, i2c)
+    
+    def dump_full_content(self, outputfile: str):
+        chunk_size = 256
+        counter = 0
+        with open(outputfile, "ab") as outfile:
+            while True:
+                if counter == 0x3e:
+                    data = self.read_from_2byte_cell_addr(counter, 0x00, 0x80)
+                    outfile.write(bytes(data))
+                    return 
+                else:   
+                    data = self.read_from_2byte_cell_addr(counter, 0x00, chunk_size)
+                    counter += 1
+                    outfile.write(bytes(data))
 
 
 def main(chip, args):
@@ -152,7 +176,7 @@ if __name__ == "__main__":
     parser.add_argument("--ftdi_device",
                         help="Specify the FTDI device to use. Default: 'ftdi://:/1'",
                         type=str, default="ftdi://:/1")
-    parser.add_argument("--eeprom_device", choices=["atmel_24c256", "st_m24215_w"], required=True)
+    parser.add_argument("--eeprom_device", choices=["atmel_24c256", "st_m24215_w", "st_m24128bw"], required=True)
     parser.add_argument("-o" , "--output-file", help="Specify dump file for eeprom contents", default="mem.out")
     subparsers = parser.add_subparsers(dest="Mode command")
     subparsers.required = True
@@ -170,6 +194,8 @@ if __name__ == "__main__":
         chip = Atmel_24c256(eeprom_addr, i2c)
     elif args.eeprom_device == "st_m24215_w":
         chip = ST_M24215_W(eeprom_addr, i2c)
+    elif args.eeprom_device == "st_m24128bw":
+        chip = ST_M24128_BW(eeprom_addr, i2c)
     else:
         print("[!] Unsupported chip. See help for available devices.")
     main(chip, args)
