@@ -1,6 +1,5 @@
 # i2c-tools
-Python tooling for interacting with i2c devices using an FTDI FT232H chip. Made this to learn about how the i2c protocol works. 
-
+Python tooling for interacting with i2c devices using an FTDI FT232H chip.
 ## Install requirements
 <code>pip install -r requirements.txt</code>
 
