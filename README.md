@@ -12,4 +12,4 @@ Write to address:
 Dump full chip content: <code>python i2c_tools.py -o mem.out --eeprom_device atmel_24c256 0x50 mode dump_full_content</code>
 
 ## Support
-Tested devices: atmel_24c256, st_m24215_w.
+Tested devices: atmel_24c256, st_m24215_w, st_m24128_bw.
